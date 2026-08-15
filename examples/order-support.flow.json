@@ -1,0 +1,122 @@
+{
+  "id": "order-support",
+  "version": "1.0.0",
+  "entry": "greet",
+  "nodes": {
+    "greet": {
+      "type": "message",
+      "text": "Hi! Welcome to Acme support.",
+      "next": "intent"
+    },
+    "intent": {
+      "type": "prompt",
+      "text": "What can I help you with? (order status / refund / agent)",
+      "retry_text": "Sorry, I didn't catch that. Please answer: order status, refund, or agent.",
+      "slot": { "name": "intent", "type": "choice", "options": ["order status", "refund", "agent"] },
+      "max_attempts": 2,
+      "on_exhausted": "handoff_confused",
+      "next": "route"
+    },
+    "route": {
+      "type": "branch",
+      "cases": [
+        { "when": { "slot": "intent", "op": "eq", "value": "agent" }, "next": "handoff_agent" }
+      ],
+      "else": "ask_order"
+    },
+    "ask_order": {
+      "type": "prompt",
+      "text": "Sure. What's your order number? (it looks like ORD-12345)",
+      "retry_text": "Hmm, that doesn't look like an order number. It looks like ORD-12345.",
+      "slot": { "name": "order_id", "type": "regex", "pattern": "^ORD-\\d{3,}$" },
+      "max_attempts": 3,
+      "on_exhausted": "handoff_confused",
+      "next": "lookup"
+    },
+    "lookup": {
+      "type": "action",
+      "handler": "lookupOrder",
+      "input": { "order_id": "order_id" },
+      "output": "order",
+      "timeout_ms": 5000,
+      "on_error": "handoff_error",
+      "next": "after_lookup"
+    },
+    "after_lookup": {
+      "type": "branch",
+      "cases": [
+        { "when": { "slot": "intent", "op": "eq", "value": "refund" }, "next": "refund_check" }
+      ],
+      "else": "status_msg"
+    },
+    "status_msg": {
+      "type": "message",
+      "text": "Order {{order_id}} is currently: {{order.status}}.",
+      "next": "wrap_up"
+    },
+    "refund_check": {
+      "type": "branch",
+      "cases": [
+        { "when": { "slot": "order.total", "op": "gt", "value": 100 }, "next": "handoff_high_value" }
+      ],
+      "else": "confirm_refund"
+    },
+    "confirm_refund": {
+      "type": "prompt",
+      "text": "I can refund ${{order.total}} for order {{order_id}}. Should I go ahead? (yes/no)",
+      "retry_text": "Please answer yes or no.",
+      "slot": { "name": "confirm", "type": "choice", "options": ["yes", "no"] },
+      "max_attempts": 2,
+      "on_exhausted": "handoff_confused",
+      "next": "confirm_route"
+    },
+    "confirm_route": {
+      "type": "branch",
+      "cases": [
+        { "when": { "slot": "confirm", "op": "eq", "value": "yes" }, "next": "do_refund" }
+      ],
+      "else": "no_refund"
+    },
+    "do_refund": {
+      "type": "action",
+      "handler": "issueRefund",
+      "input": { "order_id": "order_id", "amount": "order.total" },
+      "output": "refund",
+      "timeout_ms": 5000,
+      "on_error": "handoff_error",
+      "next": "refund_msg"
+    },
+    "refund_msg": {
+      "type": "message",
+      "text": "Done! Refund {{refund.id}} for ${{refund.amount}} is on its way.",
+      "next": "wrap_up"
+    },
+    "no_refund": {
+      "type": "message",
+      "text": "No problem, nothing was changed.",
+      "next": "wrap_up"
+    },
+    "wrap_up": {
+      "type": "message",
+      "text": "Thanks for contacting Acme. Have a great day!",
+      "next": "end"
+    },
+    "end": { "type": "end" },
+    "handoff_agent": {
+      "type": "handoff",
+      "reason": "customer asked for a human"
+    },
+    "handoff_confused": {
+      "type": "handoff",
+      "reason": "repeated invalid input, customer may be stuck"
+    },
+    "handoff_high_value": {
+      "type": "handoff",
+      "reason": "refund over $100 (order {{order_id}}, ${{order.total}}) needs human approval"
+    },
+    "handoff_error": {
+      "type": "handoff",
+      "reason": "backend error: {{last_error}}"
+    }
+  }
+}

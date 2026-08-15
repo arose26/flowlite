@@ -1,0 +1,40 @@
+{
+  "name": "flowlite",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Declarative, versioned, resumable conversation flows: JSON in, deterministic turn-based execution out.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "demo": "tsc -p tsconfig.examples.json && node dist-demo/examples/run-demo.js"
+  },
+  "keywords": [
+    "conversation",
+    "chatbot",
+    "flow",
+    "state-machine",
+    "declarative"
+  ],
+  "author": "Kole Harvey",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.6.0",
+    "vitest": "^3.0.0"
+  }
+}
